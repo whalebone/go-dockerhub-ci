@@ -28,8 +28,8 @@ func dockerhubConfirmer(c echo.Context) error {
 	pushedAtTime := time.Unix(int64(payload.PushData.PushedAt), 0)
 
 	slackData := fmt.Sprintf("*%s* pushed *%s:%s* at %s", payload.PushData.Pusher, payload.Repository.Name, payload.PushData.Tag, pushedAtTime)
-	c.Logger().Debug(string(slackData))
-	err = sendSlackNotification(string(slackData))
+	c.Logger().Debug(slackData)
+	err = sendSlackNotification(slackData)
 	if err != nil {
 		return c.JSON(http.StatusBadRequest, JSONError(err))
 	}
@@ -41,7 +41,10 @@ func dockerhubConfirmer(c echo.Context) error {
 		TargetURL:   "",
 	}
 
-	confirmDockerhub(payload.CallbackURL, response)
+	err = confirmDockerhub(payload.CallbackURL, response)
+	if err != nil {
+		return c.JSON(http.StatusBadRequest, JSONError(err))
+	}
 
 	return c.JSON(http.StatusOK, response)
 }
@@ -78,9 +81,9 @@ func sendSlackNotification(msg string) error {
 	}
 
 	buf := new(bytes.Buffer)
-	buf.ReadFrom(resp.Body)
+	_, _ = buf.ReadFrom(resp.Body)
 	if buf.String() != "ok" {
-		return errors.New("Non-ok response returned from Slack")
+		return errors.New("non-ok response returned from Slack")
 	}
 	return nil
 }
