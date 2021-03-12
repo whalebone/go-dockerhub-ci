@@ -1,10 +1,7 @@
 package main
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -17,83 +14,14 @@ import (
 	"github.com/spf13/viper"
 )
 
-func dockerhubConfirmer(c echo.Context) error {
-
-	payload := &dockerhubPayload{}
-	err := c.Bind(payload)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
-	}
-
-	pushedAtTime := time.Unix(int64(payload.PushData.PushedAt), 0)
-
-	slackData := fmt.Sprintf("*%s* pushed *%s:%s* at %s", payload.PushData.Pusher, payload.Repository.Name, payload.PushData.Tag, pushedAtTime)
-	c.Logger().Debug(slackData)
-	err = sendSlackNotification(slackData)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
-	}
-
-	response := &successResponse{
-		State:       "success",
-		Description: "Slack notified",
-		Context:     "A OK",
-		TargetURL:   "",
-	}
-
-	err = confirmDockerhub(payload.CallbackURL, response)
-	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
-	}
-
-	return c.JSON(http.StatusOK, response)
-}
-
-func confirmDockerhub(url string, payload *successResponse) error {
-	responseBody, _ := json.Marshal(payload)
-	req, err := http.NewRequest(http.MethodPost, url, bytes.NewBuffer(responseBody))
-
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	_, err = client.Do(req)
-
-	return err
-}
-
-func sendSlackNotification(msg string) error {
-	slackBody, _ := json.Marshal(slackRequestBody{Text: msg})
-	req, err := http.NewRequest(http.MethodPost, viper.GetString("WEBHOOK"), bytes.NewBuffer(slackBody))
-	if err != nil {
-		return err
-	}
-
-	req.Header.Add("Content-Type", "application/json")
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return err
-	}
-
-	buf := new(bytes.Buffer)
-	_, _ = buf.ReadFrom(resp.Body)
-	if buf.String() != "ok" {
-		return errors.New("non-ok response returned from Slack")
-	}
-	return nil
-}
+const DEFAULT_TIMEOUT = 10 * time.Second
 
 func main() {
 	viper.AutomaticEnv()
 	viper.SetDefault("PORT", "8080")
 	viper.SetDefault("PATH_PREFIX", "/")
 
-	prefix := viper.GetString("PATH_PREFIX")
+	prefix := ensureAbsolute(viper.GetString("PATH_PREFIX"))
 	fmt.Println("Path prefix: ", prefix)
 
 	e := echo.New()
@@ -101,21 +29,23 @@ func main() {
 
 	loggerConfig := middleware.DefaultLoggerConfig
 	loggerConfig.Skipper = func(c echo.Context) bool {
-		if c.Request().Method == http.MethodOptions {
-			return true
-		}
-		return false
+		return c.Request().Method == http.MethodOptions
 	}
 
 	e.Use(middleware.LoggerWithConfig(loggerConfig))
 	e.Use(middleware.Recover())
 
+	// e.Use(middleware.BodyDump(func(c echo.Context, reqBody, resBody []byte) {
+	// 	e.Logger.Debug(string(reqBody))
+	// }))
+
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
-		AllowOrigins: []string{"https://*.dockerhub.com", "https://dockerhub.com"},
+		AllowOrigins: []string{"https://*.dockerhub.com", "https://dockerhub.com", "https://harbor.whalebone.io"},
 		AllowMethods: []string{http.MethodPost, http.MethodOptions},
 	}))
 
 	e.POST(prefix, dockerhubConfirmer)
+	e.POST(appendPath(prefix,"harbor"), harborHandler)
 
 	// Start server
 	go func() {
@@ -131,10 +61,24 @@ func main() {
 	signal.Notify(quit, os.Interrupt)
 	<-quit
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), DEFAULT_TIMEOUT)
 	defer cancel()
 	if err := e.Shutdown(ctx); err != nil {
 		e.Logger.Fatal(err)
 	}
+}
 
+func ensureAbsolute(path string) string {
+	if path[0] == '/' {
+		return path
+	}
+	return "/" + path
+}
+
+func appendPath(path string, second string) string {
+	if path[len(path)-1] == '/' {
+		return path + second
+	}
+
+	return path + "/" + second
 }
