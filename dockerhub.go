@@ -21,11 +21,14 @@ func dockerhubConfirmer(c echo.Context) error {
 	pushedAtTime := time.Unix(int64(payload.PushData.PushedAt), 0)
 
 	slackData := fmt.Sprintf(
-		"*%s* pushed *%s:%s* at %s",
+		"*%s* pushed *%s:%s* to Dockerhub at <!date^%d^{date_num} {time_secs}|%s>\n> *%s:%s*",
 		payload.PushData.Pusher,
 		payload.Repository.Name,
 		payload.PushData.Tag,
+		int64(payload.PushData.PushedAt),
 		pushedAtTime,
+		payload.Repository.Name,
+		payload.PushData.Tag,
 	)
 
 	c.Logger().Debug(slackData)

@@ -7,8 +7,32 @@ type successResponse struct {
 	TargetURL   string `json:"target_url"`
 }
 
-type slackRequestBody struct {
+type slackMessageBlock struct {
+	Section string `json:"type"`
+	Text slackMarkdown `json:"text"`
+}
+
+type slackMarkdown struct {
+	Type string `json:"type"`
 	Text string `json:"text"`
+	Verbatim bool `json:"verbatim"`
+}
+
+type slackMessage struct {
+	Blocks []slackMessageBlock `json:"blocks"`
+}
+
+func createSlackMessage(message string) *slackMessage {
+	return &slackMessage{
+		Blocks: []slackMessageBlock{{
+			Section: "section",
+			Text: slackMarkdown{
+				Type: "mrkdwn",
+				Text: message,
+				Verbatim: true,
+			}},
+		},
+	}
 }
 
 // ErrMessage is a message that is returned on error.

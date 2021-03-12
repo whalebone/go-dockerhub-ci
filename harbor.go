@@ -23,10 +23,13 @@ func harborHandler(c echo.Context) error {
 
 	for _, resource := range payload.EventData.Resources {
 		slackData := fmt.Sprintf(
-			"*%s* pushed *%s* at %s",
+			"*%s* pushed *%s:%s* to Harbor at <!date^%d^{date_num} {time_secs}|%s>\n> *%s*",
 			payload.User,
-			resource.Resource,
+			payload.EventData.Repository.FullRepoName,
+			resource.Tag,
+			int64(payload.Time),
 			pushedAtTime,
+			resource.Resource,
 		)
 		err = sendSlackNotification(slackData)
 		if err != nil {

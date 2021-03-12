@@ -11,7 +11,7 @@ import (
 var SlackError = errors.New("non-ok response returned from Slack")
 
 func sendSlackNotification(msg string) error {
-	slackBody, _ := json.Marshal(slackRequestBody{Text: msg})
+	slackBody, _ := json.Marshal(createSlackMessage(msg))
 	req, err := http.NewRequest(http.MethodPost, viper.GetString("WEBHOOK"), bytes.NewBuffer(slackBody))
 	if err != nil {
 		return err
