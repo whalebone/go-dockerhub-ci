@@ -16,7 +16,7 @@ func HarborHandler(c echo.Context) error {
 		return c.JSON(http.StatusBadRequest, model.JSONError(err))
 	}
 
-	if payload.EventType != "pushImage" {
+	if payload.EventType != "pushImage" && payload.EventType != "PUSH_ARTIFACT" {
 		return c.JSON(http.StatusOK, &model.SuccessResponse{})
 	}
 
