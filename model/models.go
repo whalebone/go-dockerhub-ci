@@ -1,6 +1,10 @@
-package main
+package model
 
-type successResponse struct {
+import "time"
+
+const DefaultTimeout = 10 * time.Second
+
+type SuccessResponse struct {
 	State       string `json:"state"`
 	Description string `json:"description"`
 	Context     string `json:"context"`
@@ -8,27 +12,27 @@ type successResponse struct {
 }
 
 type slackMessageBlock struct {
-	Section string `json:"type"`
-	Text slackMarkdown `json:"text"`
+	Section string        `json:"type"`
+	Text    slackMarkdown `json:"text"`
 }
 
 type slackMarkdown struct {
-	Type string `json:"type"`
-	Text string `json:"text"`
-	Verbatim bool `json:"verbatim"`
+	Type     string `json:"type"`
+	Text     string `json:"text"`
+	Verbatim bool   `json:"verbatim"`
 }
 
 type slackMessage struct {
 	Blocks []slackMessageBlock `json:"blocks"`
 }
 
-func createSlackMessage(message string) *slackMessage {
+func CreateSlackMessage(message string) *slackMessage {
 	return &slackMessage{
 		Blocks: []slackMessageBlock{{
 			Section: "section",
 			Text: slackMarkdown{
-				Type: "mrkdwn",
-				Text: message,
+				Type:     "mrkdwn",
+				Text:     message,
 				Verbatim: true,
 			}},
 		},
@@ -59,7 +63,7 @@ type repoData struct {
 	Name string `json:"repo_name"`
 }
 
-type dockerhubPayload struct {
+type DockerhubPayload struct {
 	CallbackURL string   `json:"callback_url"`
 	PushData    pushData `json:"push_data"`
 	Repository  repoData `json:"repository"`
@@ -81,7 +85,7 @@ type harborEvent struct {
 	Repository harborRepository `json:"repository"`
 }
 
-type harborPayload struct {
+type HarborPayload struct {
 	EventType string      `json:"type"`
 	Time      float64     `json:"occur_at"`
 	User      string      `json:"operator"`

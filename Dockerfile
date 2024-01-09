@@ -1,29 +1,50 @@
-FROM alpine:latest as certs
-RUN apk --update add ca-certificates
-
 # build workspace
-FROM golang:1.16 as build
+FROM golang:1.21-alpine AS build
 
-WORKDIR /go/src/github.com/whalebone/go-dockerhub-ci
-RUN mkdir -p /build
+# set the Current Working Directory inside the build container
+WORKDIR /build
 
-# Copy go mod and sum files
+# Create appuser.
+ENV USER=appuser
+ENV UID=10001
+# See https://stackoverflow.com/a/55757473/12429735RUN
+RUN adduser \
+    --disabled-password \
+    --gecos "" \
+    --home "/nonexistent" \
+    --shell "/sbin/nologin" \
+    --no-create-home \
+    --uid "${UID}" \
+    "${USER}"
+
+# copy go mod and sum files
 COPY go.mod go.sum ./
 
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
-RUN go mod download
+# set git and go to fetch private go module from github
+# download all dependencies; dependencies will be cached if the go.mod and go.sum files are not changed
+# install ca-certificates to allow external tls connections
+RUN apk add --no-cache git ca-certificates && \
+    go mod download && go mod verify
 
-COPY *.go ./
+# copy sources
+COPY . .
 
-# For scratch prod builds
-RUN CGO_ENABLED=0 GOOS=linux go build -o go-dockerhub-ci .
+# build the Go app, -w -s to strip debug info
+RUN export GO_MOD=$(go list -m); mkdir binary && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s" \
+    -o /build/binary/go-dockerhub-ci ./cmd/main.go
 
-# prod build
+# runtime image
 FROM scratch
 
-WORKDIR /go/bin
-ENV PATH=/bin
-COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
-COPY --from=build /go/src/github.com/whalebone/go-dockerhub-ci/go-dockerhub-ci .
+COPY --from=build /etc/passwd /etc/passwd
+COPY --from=build /etc/group /etc/group
+COPY --from=build /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-ENTRYPOINT [ "./go-dockerhub-ci" ]
+COPY --from=build /build/binary/go-dockerhub-ci .
+
+USER appuser:appuser
+
+EXPOSE 8080
+
+ENTRYPOINT ["/app"]

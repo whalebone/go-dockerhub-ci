@@ -1,4 +1,4 @@
-package main
+package handlers
 
 import (
 	"bytes"
@@ -9,13 +9,14 @@ import (
 	"time"
 
 	"github.com/labstack/echo/v4"
+	"github.com/whalebone/go-dockerhub-ci/model"
 )
 
-func dockerhubConfirmer(c echo.Context) error {
-	payload := &dockerhubPayload{}
+func DockerhubConfirmer(c echo.Context) error {
+	payload := &model.DockerhubPayload{}
 	err := c.Bind(payload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
+		return c.JSON(http.StatusBadRequest, model.JSONError(err))
 	}
 
 	pushedAtTime := time.Unix(int64(payload.PushData.PushedAt), 0)
@@ -34,10 +35,10 @@ func dockerhubConfirmer(c echo.Context) error {
 	c.Logger().Debug(slackData)
 	err = sendSlackNotification(slackData)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
+		return c.JSON(http.StatusBadRequest, model.JSONError(err))
 	}
 
-	response := &successResponse{
+	response := &model.SuccessResponse{
 		State:       "success",
 		Description: "Slack notified",
 		Context:     "A OK",
@@ -46,13 +47,13 @@ func dockerhubConfirmer(c echo.Context) error {
 
 	err = confirmDockerhub(payload.CallbackURL, response)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
+		return c.JSON(http.StatusBadRequest, model.JSONError(err))
 	}
 
 	return c.JSON(http.StatusOK, response)
 }
 
-func confirmDockerhub(url string, payload *successResponse) error {
+func confirmDockerhub(url string, payload *model.SuccessResponse) error {
 	responseBody, _ := json.Marshal(payload)
 
 	req, err := http.NewRequestWithContext(
@@ -68,7 +69,7 @@ func confirmDockerhub(url string, payload *successResponse) error {
 
 	req.Header.Add("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: DEFAULT_TIMEOUT}
+	client := &http.Client{Timeout: model.DefaultTimeout}
 	_, err = client.Do(req)
 
 	return err

@@ -1,22 +1,23 @@
-package main
+package handlers
 
 import (
 	"fmt"
-	"github.com/labstack/echo/v4"
 	"net/http"
 	"time"
+
+	"github.com/labstack/echo/v4"
+	"github.com/whalebone/go-dockerhub-ci/model"
 )
 
-func harborHandler(c echo.Context) error {
-
-	payload := &harborPayload{}
+func HarborHandler(c echo.Context) error {
+	payload := &model.HarborPayload{}
 	err := c.Bind(payload)
 	if err != nil {
-		return c.JSON(http.StatusBadRequest, JSONError(err))
+		return c.JSON(http.StatusBadRequest, model.JSONError(err))
 	}
 
 	if payload.EventType != "pushImage" {
-		return c.JSON(http.StatusOK, &successResponse{})
+		return c.JSON(http.StatusOK, &model.SuccessResponse{})
 	}
 
 	pushedAtTime := time.Unix(int64(payload.Time), 0)
@@ -33,12 +34,11 @@ func harborHandler(c echo.Context) error {
 		)
 		err = sendSlackNotification(slackData)
 		if err != nil {
-			return c.JSON(http.StatusBadRequest, JSONError(err))
+			return c.JSON(http.StatusBadRequest, model.JSONError(err))
 		}
 	}
 
-
-	response := &successResponse{
+	response := &model.SuccessResponse{
 		State:       "success",
 		Description: "Slack notified",
 		Context:     "A OK",
