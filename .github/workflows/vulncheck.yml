@@ -1,0 +1,16 @@
+name: Vulnerability check
+
+on:
+  push:
+    branches:
+      - "**"
+
+jobs:
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Go Vulnerability Check
+        uses: whalebone/github-actions-go/vulncheck@v1
+        with:
+          go-version-file: 'go.mod'
+          go-package: './...'
