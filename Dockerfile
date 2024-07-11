@@ -1,5 +1,5 @@
 # build workspace
-FROM golang:1.21-alpine AS build
+FROM golang:1.22-alpine AS build
 
 # set the Current Working Directory inside the build container
 WORKDIR /build
