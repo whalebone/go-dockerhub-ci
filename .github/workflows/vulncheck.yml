@@ -1,9 +1,6 @@
 name: Vulnerability check
 
-on:
-  push:
-    branches:
-      - "**"
+on: pull_request
 
 jobs:
   vulncheck:
@@ -12,5 +9,5 @@ jobs:
       - name: Run Go Vulnerability Check
         uses: whalebone/github-actions-go/vulncheck@v1
         with:
-          go-version-file: 'go.mod'
-          go-package: './...'
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
