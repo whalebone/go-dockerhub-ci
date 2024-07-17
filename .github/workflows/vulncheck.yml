@@ -1,0 +1,13 @@
+name: Vulnerability check
+
+on: pull_request
+
+jobs:
+  vulncheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run Go Vulnerability Check
+        uses: whalebone/github-actions-go/vulncheck@v1
+        with:
+          GH_USERNAME: ${{ secrets.GH_USERNAME }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
