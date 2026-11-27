@@ -1,0 +1,13 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: go-dockerhub-ci
+  title: Docker Hub CI Notifier
+  description: Webhook receiver for Docker Hub and Harbor image push events that posts a build-finished message to Slack; no deployment found in k8s-wb.
+  annotations:
+    github.com/project-slug: whalebone/go-dockerhub-ci
+spec:
+  type: service
+  lifecycle: deprecated
+  owner: aegis
+  system: developer-experience
